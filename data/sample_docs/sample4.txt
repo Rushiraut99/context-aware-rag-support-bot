@@ -1,0 +1,39 @@
+# ACME Support Platform – Deployment Playbook
+
+Author: Site Reliability Engineering (SRE) Team  
+Version: 3.2  
+Last Updated: Sept 2025
+
+---
+
+## 1. Purpose
+This playbook outlines the standard deployment process for the ACME Support Platform across staging and production environments.
+
+---
+
+## 2. Pre-Deployment Checklist
+
+### 2.1 Developer Checks
+- All merge requests approved
+- Unit tests ≥ 90% pass rate
+- Integration tests green in CI/CD
+- No open security vulnerabilities (Snyk / Dependabot)
+
+### 2.2 Ops Checks
+- Verify free disk > 20%
+- Check Kubernetes cluster health
+- Confirm Redis + PostgreSQL replicas in sync
+- Validate TLS certificates not expiring < 15 days
+
+---
+
+## 3. Deployment Strategy
+We use **Blue-Green Deployments** with Kubernetes:
+
+- Blue = current production  
+- Green = new version being deployed  
+
+Traffic is shifted using `ingress-nginx` annotations.
+
+Commands:
+

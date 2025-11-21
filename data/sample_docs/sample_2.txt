@@ -1,0 +1,137 @@
+# ACME Support Platform – API Integration Guide
+
+Version: 2.4.1  
+Last Updated: Oct 2025
+
+---
+
+## 1. Introduction
+This document serves as the technical guide for integrating external applications with the ACME Support Platform via REST APIs and Webhooks.  
+All APIs follow RESTful design, are JSON-based, and require OAuth2 authentication.
+
+Base URL (Production):
+https://api.acme-support.com/v1/
+
+Base URL (Sandbox):
+https://sandbox.acme-support.com/v1/
+
+---
+
+## 2. Authentication
+
+### 2.1 Token Endpoint
+POST /oauth/token  
+
+Required fields:
+- `client_id`
+- `client_secret`
+- `grant_type`
+
+Sample Request:
+{
+  "client_id": "YOUR_ID",
+  "client_secret": "YOUR_SECRET",
+  "grant_type": "client_credentials"
+}
+
+### 2.2 Response:
+{
+  "access_token": "eyJh...",
+  "token_type": "Bearer",
+  "expires_in": 3600
+}
+
+---
+
+## 3. Ticket APIs
+
+### 3.1 Create Ticket
+POST /tickets
+
+Request Body:
+{
+  "title": "Issue with login",
+  "description": "Customer unable to log in to dashboard",
+  "customer_id": "CUST102",
+  "priority": "high"
+}
+
+Response:
+{
+  "id": "TCK-10492",
+  "status": "open",
+  "created_at": "2025-09-12T11:30:00Z"
+}
+
+---
+
+### 3.2 Get Ticket
+GET /tickets/{ticket_id}
+
+Response:
+{
+  "id": "TCK-10492",
+  "title": "Issue with login",
+  "status": "open",
+  "assigned_to": "AGT221",
+  "activities": [...]
+}
+
+---
+
+## 4. Webhooks
+
+### 4.1 Available Events
+- ticket.created  
+- ticket.updated  
+- ticket.closed  
+- notification.email.sent  
+- notification.sms.failed  
+
+### 4.2 Sample Webhook Payload:
+{
+  "event": "ticket.updated",
+  "ticket_id": "TCK-10492",
+  "changes": {
+    "status": ["open", "in_progress"],
+    "assigned_to": ["null", "AGT201"]
+  },
+  "timestamp": "2025-11-01T08:21:34Z"
+}
+
+---
+
+## 5. Rate Limits
+- Default: 120 requests/min per IP
+- Burst Allowance: 20 requests
+- 429 responses include Retry-After header
+
+---
+
+## 6. Error Codes
+| Code | Meaning                     |
+|------|-----------------------------|
+| 400  | Bad Request                 |
+| 401  | Invalid token               |
+| 403  | Permission denied           |
+| 404  | Resource not found          |
+| 500  | Internal server error       |
+| 503  | Service unavailable         |
+
+---
+
+## 7. Best Practices
+- Always implement exponential backoff: 2,4,8,16 seconds
+- Use pagination: `?limit=50&offset=0`
+- Cache “GET” results whenever possible
+- Rotate tokens before expiration
+
+---
+
+## 8. Sandbox Notes
+Sandbox environment sends simulated responses and does NOT trigger real emails or SMS messages.
+
+---
+
+End of Document
+

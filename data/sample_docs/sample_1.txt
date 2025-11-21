@@ -1,0 +1,96 @@
+# ACME Support Platform – Internal Knowledge Base
+
+## 1. Overview
+The ACME Support Platform is a cloud-hosted customer engagement system used by enterprise clients to manage tickets, automate workflows, and integrate with third-party CRMs. The platform exposes REST APIs, real-time webhooks, and an agent dashboard.
+
+The platform is deployed using a microservices architecture running on Kubernetes (K8s). Each service communicates through gRPC internally and HTTPS externally.
+
+---
+
+## 2. Key Components
+
+### 2.1 Ticket Service
+- Responsible for CRUD operations on tickets  
+- Stores data in PostgreSQL  
+- Exposes the `/tickets` and `/comments` endpoints  
+- Supports filtering by status, priority, and customer ID  
+
+### 2.2 Notification Service
+- Sends email, SMS, and push notifications  
+- Uses Redis for message queueing  
+- Integrates with AWS SES and Twilio  
+- Supports retry logic with exponential backoff  
+
+### 2.3 Agent Dashboard (Frontend)
+- Built with React + TypeScript  
+- Connects to backend via REST and WebSockets  
+- Provides real-time updates of ticket statuses  
+
+---
+
+## 3. Authentication
+The platform uses OAuth 2.0 with JWT tokens.  
+Access tokens expire in 1 hour.  
+Refresh tokens expire in 30 days.
+
+Supported grant types:
+- Client Credentials  
+- Authorization Code  
+- Refresh Token  
+
+---
+
+## 4. Common Troubleshooting
+
+### Issue: API returns 429 (Too Many Requests)
+Possible Causes:
+1. Rate-limit exceeded (default: 120 requests/min per client)
+2. Uncommitted long-running background jobs
+3. Missing exponential backoff
+
+Fix:
+- Reduce request frequency
+- Enable retry with `2^n` backoff
+- Check Redis queue for stuck messages
+
+---
+
+### Issue: Notification Service Not Sending Emails
+Checklist:
+- Verify AWS SES credentials
+- Ensure "email from" domain is verified
+- Check Redis worker logs
+- Validate message payload format
+
+---
+
+## 5. Deployment Notes
+- All services run in Kubernetes using Helm charts  
+- PostgreSQL uses read replicas for high availability  
+- Redis is configured with AOF + snapshotting  
+- Logs are shipped to ELK stack via FluentBit  
+- Metrics collected using Prometheus + Grafana  
+
+---
+
+## 6. Frequently Asked Questions
+
+**Q: How do I create a ticket through the API?**  
+A: Send a POST request to `/tickets` with fields: `title`, `description`, `customer_id`, and `priority`.
+
+**Q: Can agents receive real-time updates?**  
+A: Yes, via WebSockets through the `/ws/updates` endpoint.
+
+**Q: How do I test the system locally?**  
+A: Use `docker-compose up` to start PostgreSQL, Redis, and the services.
+
+---
+
+## 7. Internal Useful Links (for staff only)
+- Architecture diagram: `/internal/docs/architecture.png`
+- API reference: `/internal/docs/api-reference.md`
+- Incident runbooks: `/internal/runbooks/*`
+
+---
+
+## End of Document

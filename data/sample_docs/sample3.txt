@@ -1,0 +1,113 @@
+# ACME Support Platform – Advanced Troubleshooting Guide
+
+Version: 1.8  
+Maintained by: DevOps Team  
+Updated: Nov 2025
+
+---
+
+## 1. Introduction
+This guide is for Level 2 and Level 3 support engineers diagnosing systemic, recurring, or infrastructure-level issues.
+
+---
+
+## 2. Database Performance Issues
+
+### 2.1 Symptom: Slow ticket queries (>800ms)
+Possible Causes:
+1. Missing composite index on (customer_id, status)
+2. High read load on master instance
+3. Long-running unoptimized queries
+4. Sequential scans due to stale stats
+
+Fix:
+- Run `ANALYZE tickets`
+- Check slow-query log: `/var/log/pg/slow.log`
+- Promote read replica for analytics workloads
+- Add missing indexes if confirmed by `EXPLAIN ANALYZE`
+
+---
+
+## 3. Redis Queue Delays
+
+### 3.1 Symptom: Notification messages delayed by 10+ minutes
+Checklist:
+- Redis memory > 80%
+- AOF file > 2GB (forces slow rewrites)
+- Worker pods restarting repeatedly
+- High CPU on node running Redis
+
+Fix:
+- Run `redis-cli info memory`
+- Restart worker deployment: `kubectl rollout restart deploy/notification-workers`
+- Shrink AOF using `BGREWRITEAOF`
+
+---
+
+## 4. Webhook Delivery Failures
+
+### 4.1 Symptom: Partner complains about missing webhook events
+Diagnostics:
+1. Check Dead Letter Queue: `/queues/webhooks-dlq`
+2. Verify partner URL returns 2xx
+3. Inspect retry counts: `/metrics/webhooks_retries_total`
+
+Fix:
+- Replay DLQ manually using admin tool
+- Ask partner to whitelist ACME IPs
+- Increase timeout from 3s → 8s
+
+---
+
+## 5. Kubernetes Related Issues
+
+### 5.1 CrashLoopBackOff in Ticket Service
+Root causes:
+- ConfigMap missing required env var
+- PostgreSQL connection timeout
+- OOMKilled due to large query loads
+
+Run:
+`kubectl describe pod ticket-service-xxx`
+
+Common Fixes:
+- Increase memory limit from 256Mi → 512Mi
+- Validate `DATABASE_URL` in ConfigMap
+- Ensure service account has correct IAM permissions
+
+---
+
+## 6. Authentication Failures
+
+### 6.1 Symptom: Users frequently logged out
+Causes:
+- Clock skew between services > 30 seconds
+- Token TTL misconfigured in OAuth server
+- Browser strips 3rd party cookies
+
+Fix:
+- Sync NTP on all nodes  
+- Increase token TTL to 2 hours  
+- Set cookie attribute: `SameSite=None; Secure`
+
+---
+
+## 7. Advanced Logs to Check
+- `/var/log/nginx/access.log`
+- `/var/log/nginx/error.log`
+- `/var/log/pg/slow.log`
+- `/var/log/acme/notification-worker.log`
+- `/var/log/kubelet/kubelet.log`
+
+---
+
+## 8. When to Escalate to DevOps
+Escalate if:
+- Error rate stays > 2% for 15 minutes
+- P99 latency exceeds 1800 ms
+- Webhook queue length > 5000
+- Redis CPU > 90% for 10 minutes
+
+---
+
+End of Document
